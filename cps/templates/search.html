@@ -39,6 +39,22 @@
             </div>
 
           </div>
+          <div class="bulk-shelf-toolbar" data-bulk-shelf-toolbar data-bulk-selected-label="{{_('selected')}}" data-bulk-action-label="{{_('Add selected to shelf')}}">
+            <button type="button" class="btn btn-primary btn-sm" data-bulk-toggle>{{_('Bulk shelf mode')}}</button>
+            <div class="bulk-shelf-controls hidden" data-bulk-controls>
+              <span class="label label-default" data-bulk-count>0 {{_('selected')}}</span>
+              <select class="form-control input-sm" data-bulk-shelf-select>
+                <option value="">{{_('Select shelf')}}</option>
+                {% for shelf in g.shelves_access %}
+                  {% if not shelf.is_public or current_user.role_edit_shelfs() %}
+                    <option value="{{ shelf.id }}">{{ shelf.name }}{% if shelf.is_public == 1 %} {{_('(Public)')}}{% endif %}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <button type="button" class="btn btn-success btn-sm" data-bulk-add disabled>{{_('Add selected to shelf')}}</button>
+              <button type="button" class="btn btn-default btn-sm" data-bulk-clear disabled>{{_('Clear')}}</button>
+            </div>
+          </div>
         {% endif %}
       {% endif %}
       <div class="filterheader hidden-xs"><!-- ToDo: Implement filter for search results -->
@@ -55,10 +71,10 @@
 
   <div class="row display-flex">
     {% for entry in entries %}
-    <div class="col-sm-3 col-lg-2 col-xs-6 book session">
+    <div class="col-sm-3 col-lg-2 col-xs-6 book session" data-bulk-book-id="{{ entry.Books.id }}">
       <div class="cover">
         {% if entry.Books.has_cover is defined %}
-           <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+           <a class="bulk-cover-link" href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
             <span class="img" title="{{entry.Books.title}}" >
                 {{ image.book_cover(entry.Books) }}
                 {% if entry[2] == True %}<span class="badge read glyphicon glyphicon-ok"></span>{% endif %}
@@ -117,4 +133,7 @@
     {% endfor %}
   </div>
 </div>
+{% endblock %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/bulk_shelf.js') }}"></script>
 {% endblock %}

@@ -410,6 +410,61 @@ input.pill:not(:checked) + label .glyphicon { display: none; }
 
 .editable-submit { margin-bottom: 0 !important; }
 .filterheader { margin-bottom: 20px; }
+.bulk-shelf-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.bulk-shelf-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.bulk-shelf-controls .form-control {
+  width: auto;
+  min-width: 180px;
+}
+
+body.bulk-shelf-mode .book.bulk-select-enabled .cover {
+  cursor: pointer;
+}
+
+body.bulk-shelf-mode .book.bulk-select-enabled .cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid transparent;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+body.bulk-shelf-mode .book.bulk-selected .cover::before {
+  border-color: #45b29d;
+  background: rgba(69, 178, 157, 0.2);
+}
+
+body.bulk-shelf-mode .book.bulk-selected .cover::after {
+  content: "\e013";
+  font-family: "Glyphicons Halflings";
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  color: #fff;
+  background: #45b29d;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+  text-align: center;
+  font-size: 12px;
+  pointer-events: none;
+}
+
 .errorlink { margin-top: 20px; }
 .emailconfig { margin-top: 10px; }
 

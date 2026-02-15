@@ -82,6 +82,27 @@ $(function() {
         return focusedIndex > -1 ? focusedIndex : 0;
     }
 
+    function toggleMetaLinks(disabled) {
+        $("[data-bulk-book-id] .meta a").each(function() {
+            var $link = $(this);
+            if (disabled) {
+                if ($link.attr("tabindex")) {
+                    $link.attr("data-bulk-tabindex", $link.attr("tabindex"));
+                }
+                $link.attr("tabindex", "-1");
+                $link.attr("aria-disabled", "true");
+            } else {
+                if ($link.attr("data-bulk-tabindex")) {
+                    $link.attr("tabindex", $link.attr("data-bulk-tabindex"));
+                    $link.removeAttr("data-bulk-tabindex");
+                } else {
+                    $link.removeAttr("tabindex");
+                }
+                $link.removeAttr("aria-disabled");
+            }
+        });
+    }
+
     function toggleModalLinks(disabled) {
         $(".bulk-cover-link").each(function() {
             var $link = $(this);
@@ -164,6 +185,7 @@ $(function() {
         $bulkToggle.toggleClass("active", enabled);
         toggleModalLinks(enabled);
         toggleA11y(enabled);
+        toggleMetaLinks(enabled);
         if (enabled) {
             setActiveLink(0, true);
         } else {
@@ -226,6 +248,11 @@ $(function() {
         }
 
         var key = e.key;
+        if (key === "Escape") {
+            e.preventDefault();
+            setBulkMode(false);
+            return;
+        }
         if (key !== "ArrowDown" && key !== "ArrowRight" && key !== "ArrowUp" && key !== "ArrowLeft") {
             return;
         }
@@ -250,6 +277,20 @@ $(function() {
         var $coverLink = $(this).closest("[data-bulk-book-id]").find(".bulk-cover-link").first();
         if ($coverLink.length) {
             toggleBookSelectionByLink($coverLink);
+        }
+    });
+
+    $(document).on("keydown", "[data-bulk-book-id] .meta a", function(e) {
+        if (!bulkModeEnabled) {
+            return;
+        }
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            var $coverLink = $(this).closest("[data-bulk-book-id]").find(".bulk-cover-link").first();
+            if ($coverLink.length) {
+                toggleBookSelectionByLink($coverLink);
+            }
         }
     });
 

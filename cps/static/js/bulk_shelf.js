@@ -28,6 +28,31 @@ $(function() {
     var selectedLabel = $toolbar.data("bulkSelectedLabel") || "selected";
     var actionLabel = $toolbar.data("bulkActionLabel") || "Add selected to shelf";
 
+    function toggleModalLinks(disabled) {
+        $(".bulk-cover-link").each(function() {
+            var $link = $(this);
+            if (disabled) {
+                if ($link.attr("data-toggle")) {
+                    $link.attr("data-bulk-toggle", $link.attr("data-toggle"));
+                    $link.removeAttr("data-toggle");
+                }
+                if ($link.attr("data-target")) {
+                    $link.attr("data-bulk-target", $link.attr("data-target"));
+                    $link.removeAttr("data-target");
+                }
+            } else {
+                if ($link.attr("data-bulk-toggle")) {
+                    $link.attr("data-toggle", $link.attr("data-bulk-toggle"));
+                    $link.removeAttr("data-bulk-toggle");
+                }
+                if ($link.attr("data-bulk-target")) {
+                    $link.attr("data-target", $link.attr("data-bulk-target"));
+                    $link.removeAttr("data-bulk-target");
+                }
+            }
+        });
+    }
+
     function setSelected(bookId, selected) {
         var $book = $("[data-bulk-book-id='" + bookId + "']");
         if (selected) {
@@ -58,6 +83,7 @@ $(function() {
         $("[data-bulk-book-id]").toggleClass("bulk-select-enabled", enabled);
         $bulkControls.toggleClass("hidden", !enabled);
         $bulkToggle.toggleClass("active", enabled);
+        toggleModalLinks(enabled);
         if (!enabled) {
             resetSelection();
         }

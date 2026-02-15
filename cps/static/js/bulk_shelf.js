@@ -63,6 +63,27 @@ $(function() {
         });
     }
 
+    function toggleA11y(disabled) {
+        $(".bulk-cover-link").each(function() {
+            var $link = $(this);
+            if (disabled) {
+                if ($link.attr("role")) {
+                    $link.attr("data-bulk-role", $link.attr("role"));
+                }
+                $link.attr("role", "button");
+                $link.attr("aria-pressed", "false");
+            } else {
+                if ($link.attr("data-bulk-role")) {
+                    $link.attr("role", $link.attr("data-bulk-role"));
+                    $link.removeAttr("data-bulk-role");
+                } else {
+                    $link.removeAttr("role");
+                }
+                $link.removeAttr("aria-pressed");
+            }
+        });
+    }
+
     function setSelected(bookId, selected) {
         var $book = $("[data-bulk-book-id='" + bookId + "']");
         if (selected) {
@@ -70,6 +91,7 @@ $(function() {
         } else {
             $book.removeClass("bulk-selected");
         }
+        $book.find(".bulk-cover-link").attr("aria-pressed", selected ? "true" : "false");
     }
 
     function resetSelection() {
@@ -94,8 +116,25 @@ $(function() {
         $bulkControls.toggleClass("hidden", !enabled);
         $bulkToggle.toggleClass("active", enabled);
         toggleModalLinks(enabled);
+        toggleA11y(enabled);
         if (!enabled) {
             resetSelection();
+        }
+        refreshControls();
+    }
+
+    function toggleBookSelectionByLink($link) {
+        var bookId = parseInt($link.closest("[data-bulk-book-id]").data("bulkBookId"), 10);
+        if (!bookId) {
+            return;
+        }
+        var existingIndex = $.inArray(bookId, selectedIds);
+        if (existingIndex > -1) {
+            selectedIds.splice(existingIndex, 1);
+            setSelected(bookId, false);
+        } else {
+            selectedIds.push(bookId);
+            setSelected(bookId, true);
         }
         refreshControls();
     }
@@ -107,21 +146,18 @@ $(function() {
 
         e.preventDefault();
         e.stopImmediatePropagation();
+        toggleBookSelectionByLink($(this));
+    });
 
-        var bookId = parseInt($(this).closest("[data-bulk-book-id]").data("bulkBookId"), 10);
-        if (!bookId) {
+    $(document).on("keydown", ".bulk-cover-link", function(e) {
+        if (!bulkModeEnabled) {
             return;
         }
-
-        var existingIndex = $.inArray(bookId, selectedIds);
-        if (existingIndex > -1) {
-            selectedIds.splice(existingIndex, 1);
-            setSelected(bookId, false);
-        } else {
-            selectedIds.push(bookId);
-            setSelected(bookId, true);
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            toggleBookSelectionByLink($(this));
         }
-        refreshControls();
     });
 
     $bulkToggle.on("click", function() {

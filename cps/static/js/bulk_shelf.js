@@ -28,6 +28,7 @@ $(function() {
     var selectedLabel = $toolbar.data("bulkSelectedLabel") || "selected";
     var actionLabel = $toolbar.data("bulkActionLabel") || "Add selected to shelf";
     var errorLabel = $toolbar.data("bulkErrorLabel") || "Could not prepare selected books for bulk shelf action";
+    var activeIndex = -1;
 
     function showBulkError(text) {
         $("#flash_bulk_error").closest(".row-fluid.text-center").remove();
@@ -36,6 +37,49 @@ $(function() {
                 "<div id=\"flash_bulk_error\" class=\"alert alert-danger\">" + text + "</div>" +
             "</div>"
         );
+    }
+
+    function getBulkLinks() {
+        return $("[data-bulk-book-id] .bulk-cover-link").filter(":visible");
+    }
+
+    function setActiveLink(index, focusLink) {
+        var $links = getBulkLinks();
+        if (!$links.length) {
+            activeIndex = -1;
+            return;
+        }
+
+        if (index < 0) {
+            index = 0;
+        }
+        if (index >= $links.length) {
+            index = $links.length - 1;
+        }
+
+        $links.removeClass("bulk-key-active").attr("tabindex", "-1");
+        var $link = $links.eq(index);
+        $link.addClass("bulk-key-active").attr("tabindex", "0");
+        activeIndex = index;
+
+        if (focusLink) {
+            $link.focus();
+            if ($link[0] && $link[0].scrollIntoView) {
+                $link[0].scrollIntoView({block: "nearest", inline: "nearest"});
+            }
+        }
+    }
+
+    function getCurrentActiveIndex() {
+        var $links = getBulkLinks();
+        if (!$links.length) {
+            return -1;
+        }
+        if (activeIndex >= 0 && activeIndex < $links.length) {
+            return activeIndex;
+        }
+        var focusedIndex = $links.index(document.activeElement);
+        return focusedIndex > -1 ? focusedIndex : 0;
     }
 
     function toggleModalLinks(disabled) {
@@ -72,6 +116,7 @@ $(function() {
                 }
                 $link.attr("role", "button");
                 $link.attr("aria-pressed", "false");
+                $link.attr("tabindex", "-1");
             } else {
                 if ($link.attr("data-bulk-role")) {
                     $link.attr("role", $link.attr("data-bulk-role"));
@@ -80,6 +125,8 @@ $(function() {
                     $link.removeAttr("role");
                 }
                 $link.removeAttr("aria-pressed");
+                $link.removeClass("bulk-key-active");
+                $link.removeAttr("tabindex");
             }
         });
     }
@@ -117,6 +164,11 @@ $(function() {
         $bulkToggle.toggleClass("active", enabled);
         toggleModalLinks(enabled);
         toggleA11y(enabled);
+        if (enabled) {
+            setActiveLink(0, true);
+        } else {
+            activeIndex = -1;
+        }
         if (!enabled) {
             resetSelection();
         }
@@ -124,6 +176,11 @@ $(function() {
     }
 
     function toggleBookSelectionByLink($link) {
+        var focusedIndex = getBulkLinks().index($link);
+        if (focusedIndex > -1) {
+            setActiveLink(focusedIndex, false);
+        }
+
         var bookId = parseInt($link.closest("[data-bulk-book-id]").data("bulkBookId"), 10);
         if (!bookId) {
             return;
@@ -158,6 +215,30 @@ $(function() {
             e.stopImmediatePropagation();
             toggleBookSelectionByLink($(this));
         }
+    });
+
+    $(document).on("keydown", function(e) {
+        if (!bulkModeEnabled) {
+            return;
+        }
+        if ($(e.target).is("input, textarea, select, [contenteditable='true']")) {
+            return;
+        }
+
+        var key = e.key;
+        if (key !== "ArrowDown" && key !== "ArrowRight" && key !== "ArrowUp" && key !== "ArrowLeft") {
+            return;
+        }
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        var currentIndex = getCurrentActiveIndex();
+        if (currentIndex < 0) {
+            return;
+        }
+        var step = (key === "ArrowDown" || key === "ArrowRight") ? 1 : -1;
+        setActiveLink(currentIndex + step, true);
     });
 
     $(document).on("click", "[data-bulk-book-id] .meta a", function(e) {

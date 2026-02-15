@@ -443,6 +443,11 @@ body.bulk-shelf-mode .book.bulk-select-enabled .cover::before {
   pointer-events: none;
 }
 
+body.bulk-shelf-mode .bulk-cover-link.bulk-key-active .img img {
+  outline: 3px solid #1c5484;
+  outline-offset: 2px;
+}
+
 body.bulk-shelf-mode .book.bulk-selected .cover::before {
   border-color: #45b29d;
   background: rgba(69, 178, 157, 0.2);

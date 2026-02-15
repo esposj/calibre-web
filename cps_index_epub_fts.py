@@ -12,6 +12,7 @@ import argparse
 import os
 import sys
 from types import SimpleNamespace
+from datetime import datetime
 
 
 path = os.path.dirname(os.path.abspath(__file__))
@@ -63,7 +64,24 @@ def _init_configuration(settings_path):
         print("Warning: {}".format(error))
 
 
-def build_index(force_rebuild=False):
+def _render_progress_panel(processed, total, indexed, removed):
+    width = 24
+    done = 0
+    if total:
+        done = int((float(processed) / float(total)) * width)
+    done = max(0, min(width, done))
+    bar = "#" * done + "-" * (width - done)
+    percent = 0.0 if not total else (float(processed) / float(total)) * 100.0
+    print("+--------------------------------------+")
+    print("| EPUB FTS Rebuild                     |")
+    print("| [{}] {:>5.1f}%            |".format(bar, percent))
+    print("| processed: {:>5}/{:<5}              |".format(processed, total))
+    print("| indexed:   {:>5}  removed: {:>5}      |".format(indexed, removed))
+    print("| updated:   {} UTC |".format(datetime.utcnow().strftime("%H:%M:%S")))
+    print("+--------------------------------------+")
+
+
+def build_index(force_rebuild=False, show_progress=False):
     lib_session = calibre_db.connect()
     if lib_session is None:
         raise RuntimeError("Unable to connect to calibre metadata database")
@@ -82,7 +100,18 @@ def build_index(force_rebuild=False):
     index = get_epub_fts_index(ub.app_DB_path)
     if force_rebuild:
         index.clear()
-    result = index.sync_from_rows(epub_rows, config.get_book_path(), force=force_rebuild)
+
+    def progress_callback(processed, total, indexed, removed):
+        # keep output readable on large libraries; print every 10 books and final line
+        if show_progress and (processed % 10 == 0 or processed == total):
+            _render_progress_panel(processed, total, indexed, removed)
+
+    result = index.sync_from_rows(
+        epub_rows,
+        config.get_book_path(),
+        force=force_rebuild,
+        progress_callback=progress_callback if show_progress else None,
+    )
     return result, len(epub_rows), index
 
 
@@ -173,7 +202,7 @@ def main():
         if args.search and args.no_sync and not args.rebuild:
             should_sync = False
         if should_sync:
-            result, epub_total, index = build_index(force_rebuild=args.rebuild)
+            result, epub_total, index = build_index(force_rebuild=args.rebuild, show_progress=args.rebuild)
             did_sync = True
 
     stats = index.get_stats()
@@ -194,7 +223,7 @@ def main():
 
     if args.search:
         if not args.no_sync and not did_sync:
-            sync_result, epub_total, __ = build_index(force_rebuild=False)
+            sync_result, epub_total, __ = build_index(force_rebuild=False, show_progress=False)
             print("Synced before search: indexed={}, removed={}, seen={}".format(
                 sync_result["indexed"], sync_result["removed"], sync_result["seen"]
             ))

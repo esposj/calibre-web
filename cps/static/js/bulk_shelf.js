@@ -160,6 +160,18 @@ $(function() {
         }
     });
 
+    $(document).on("click", "[data-bulk-book-id] .meta a", function(e) {
+        if (!bulkModeEnabled) {
+            return;
+        }
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        var $coverLink = $(this).closest("[data-bulk-book-id]").find(".bulk-cover-link").first();
+        if ($coverLink.length) {
+            toggleBookSelectionByLink($coverLink);
+        }
+    });
+
     $bulkToggle.on("click", function() {
         setBulkMode(!bulkModeEnabled);
     });

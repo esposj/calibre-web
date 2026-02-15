@@ -263,34 +263,8 @@ class EpubFTSIndex:
                 return {"indexed": indexed_count, "removed": removed_count, "seen": len(seen_ids)}
 
     def search(self, term, limit=1000):
-        query = strip_search_term(term)
-        if not query:
-            return []
-
-        with self._lock:
-            with self._connect() as conn:
-                self._init_schema(conn)
-                try:
-                    rows = conn.execute(
-                        "SELECT book_id, MIN(bm25(epub_fts)) AS rank "
-                        "FROM epub_fts WHERE epub_fts MATCH ? "
-                        "GROUP BY book_id ORDER BY rank LIMIT ?",
-                        (query, int(limit)),
-                    ).fetchall()
-                except sqlite3.OperationalError:
-                    fallback = self._build_match_query(term)
-                    if not fallback:
-                        return []
-                    try:
-                        rows = conn.execute(
-                            "SELECT book_id, MIN(bm25(epub_fts)) AS rank "
-                            "FROM epub_fts WHERE epub_fts MATCH ? "
-                            "GROUP BY book_id ORDER BY rank LIMIT ?",
-                            (fallback, int(limit)),
-                        ).fetchall()
-                    except sqlite3.OperationalError:
-                        return []
-        return [int(book_id) for (book_id, __) in rows]
+        details = self.search_details(term, limit=limit)
+        return [row["book_id"] for row in details]
 
     def search_details(self, term, limit=20):
         query = strip_search_term(term)

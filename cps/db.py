@@ -48,6 +48,7 @@ from flask_babel import get_locale
 from flask import flash, g, Flask
 
 from . import logger, ub, isoLanguages
+from .epub_fts import get_epub_fts_index
 from .pagination import Pagination
 from .string_helper import strip_whitespaces
 
@@ -968,6 +969,7 @@ class CalibreDB:
 
         # Try FTS5 search first for better performance
         fts_ids = None
+        epub_fts_ids = None
         # Check if FTS5 table exists before attempting search
         if not hasattr(self, '_fts_available'):
             try:
@@ -993,6 +995,17 @@ class CalibreDB:
                 # FTS5 query failed, fall back to traditional search
                 log.debug("FTS5 search failed for term '{}', using fallback: {}".format(term, ex))
 
+        try:
+            epub_rows = (self.session.query(Books.id, Books.path, Data.name)
+                         .join(Data)
+                         .filter(func.lower(Data.format) == "epub")
+                         .all())
+            epub_fts = get_epub_fts_index(ub.app_DB_path)
+            epub_fts.sync_from_rows(epub_rows, config.get_book_path())
+            epub_fts_ids = epub_fts.search(term)
+        except Exception as ex:
+            log.debug("EPUB FTS search failed for term '{}': {}".format(term, ex))
+
         # Build base query with optimized joins
         base_query = self.generate_linked_query(config.config_read_column, Books)
         base_query = base_query.filter(self.common_filters(True))
@@ -1011,6 +1024,8 @@ class CalibreDB:
 
         # If FTS5 found results, use those IDs
         if fts_ids:
+            if epub_fts_ids:
+                fts_ids = list(set(fts_ids + epub_fts_ids))
             return base_query.filter(Books.id.in_(fts_ids))
 
         # Fallback to traditional search with optimized subqueries
@@ -1048,6 +1063,9 @@ class CalibreDB:
                     getattr(Books,
                             'custom_column_' + str(c.id)).any(
                         func.lower(cc_classes[c.id].value).ilike("%" + term + "%")))
+
+        if epub_fts_ids:
+            filter_expression.append(Books.id.in_(epub_fts_ids))
 
         return base_query.filter(or_(*filter_expression))
 

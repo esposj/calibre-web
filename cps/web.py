@@ -207,6 +207,38 @@ def update_view():
     return "1", 200
 
 
+@web.route("/ajax/selectedbooks", methods=["POST"])
+@user_login_required
+def update_selected_books():
+    to_save = request.get_json(silent=True) or {}
+    if not isinstance(to_save, dict):
+        return "Invalid request", 400
+
+    selected_books = to_save.get("book_ids", [])
+    if not isinstance(selected_books, list):
+        return "Invalid request", 400
+
+    ids = []
+    for book_id in selected_books:
+        try:
+            parsed_id = int(book_id)
+        except (TypeError, ValueError):
+            continue
+        if parsed_id > 0 and parsed_id not in ids:
+            ids.append(parsed_id)
+
+    if ids:
+        valid_ids = calibre_db.session.query(db.Books.id) \
+            .filter(db.Books.id.in_(ids)) \
+            .filter(calibre_db.common_filters()) \
+            .all()
+        valid_id_lookup = {book_id for (book_id,) in valid_ids}
+        ids = [book_id for book_id in ids if book_id in valid_id_lookup]
+
+    ub.searched_ids[current_user.id] = ids
+    return jsonify({"count": len(ids)}), 200
+
+
 '''
 @web.route("/ajax/getcomic/<int:book_id>/<book_format>/<int:page>")
 @user_login_required

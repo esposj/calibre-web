@@ -6,9 +6,9 @@
   <h2 class="random-books">{{_('Discover (Random Books)')}}</h2>
   <div class="row display-flex">
    {% for entry in random %}
-    <div class="col-sm-3 col-lg-2 col-xs-6 book session" id="books_rand">
+    <div class="col-sm-3 col-lg-2 col-xs-6 book session" id="books_rand" data-bulk-book-id="{{ entry.Books.id }}">
       <div class="cover">
-          <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+          <a class="bulk-cover-link" href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
               <span class="img" title="{{ entry.Books.title }}">
                 {{ image.book_cover(entry.Books) }}
                 {% if entry[2] == True %}<span class="badge read glyphicon glyphicon-ok"></span>{% endif %}
@@ -65,6 +65,25 @@
 {% endif %}
 <div class="discover load-more">
   <h2 class="{{title}}">{{title}}</h2>
+  {% if current_user.is_authenticated and (current_user.shelf.all() or g.shelves_access) %}
+    <div class="bulk-shelf-toolbar" data-bulk-shelf-toolbar data-bulk-selected-label="{{_('selected')}}" data-bulk-action-label="{{_('Add selected to shelf')}}" data-bulk-error-label="{{_('Could not prepare selected books for bulk shelf action')}}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-toggle>{{_('Bulk shelf mode')}}</button>
+      <div class="bulk-shelf-controls hidden" data-bulk-controls>
+        <span class="label label-default" data-bulk-count>0 {{_('selected')}}</span>
+        <select class="form-control input-sm" data-bulk-shelf-select>
+          <option value="">{{_('Select shelf')}}</option>
+          {% for shelf in g.shelves_access %}
+            {% if not shelf.is_public or current_user.role_edit_shelfs() %}
+              <option value="{{ shelf.id }}">{{ shelf.name }}{% if shelf.is_public == 1 %} {{_('(Public)')}}{% endif %}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+        <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-add disabled>{{_('Add selected to shelf')}}</button>
+        <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-clear disabled>{{_('Clear')}}</button>
+      </div>
+    </div>
+  {% endif %}
    {% if page != 'discover' %}
     <div class="filterheader hidden-xs">
     {% if page == 'hot' %}
@@ -89,9 +108,9 @@
   <div class="row display-flex">
     {% if entries[0] %}
     {% for entry in entries %}
-    <div class="col-sm-3 col-lg-2 col-xs-6 book session" id="books">
+    <div class="col-sm-3 col-lg-2 col-xs-6 book session" id="books" data-bulk-book-id="{{ entry.Books.id }}">
       <div class="cover">
-          <a href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
+          <a class="bulk-cover-link" href="{{ url_for('web.show_book', book_id=entry.Books.id) }}" {% if simple==false %}data-toggle="modal" data-target="#bookDetailsModal" data-remote="false"{% endif %}>
             <span class="img" title="{{ entry.Books.title }}">
               {{ image.book_cover(entry.Books) }}
               {% if entry[2] == True %}<span class="badge read glyphicon glyphicon-ok"></span>{% endif %}
@@ -153,4 +172,7 @@
   {% endif %}
   </div>
 </div>
+{% endblock %}
+{% block js %}
+<script src="{{ url_for('static', filename='js/bulk_shelf.js') }}"></script>
 {% endblock %}

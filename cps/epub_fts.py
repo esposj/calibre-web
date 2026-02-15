@@ -75,6 +75,34 @@ class EpubFTSIndex:
                 conn.commit()
             self._last_sync = 0
 
+    def get_stats(self):
+        with self._lock:
+            with self._connect() as conn:
+                self._init_schema(conn)
+                books_indexed = conn.execute("SELECT COUNT(*) FROM epub_fts_meta").fetchone()[0]
+                chunks_indexed = conn.execute("SELECT COUNT(*) FROM epub_fts").fetchone()[0]
+                total_chars = conn.execute("SELECT COALESCE(SUM(length(content)), 0) FROM epub_fts").fetchone()[0]
+                last_indexed = conn.execute("SELECT MAX(indexed_at) FROM epub_fts_meta").fetchone()[0]
+
+        avg_chunks = 0.0
+        if books_indexed:
+            avg_chunks = float(chunks_indexed) / float(books_indexed)
+
+        db_size_bytes = 0
+        try:
+            db_size_bytes = os.path.getsize(self._db_path)
+        except OSError:
+            pass
+
+        return {
+            "books_indexed": int(books_indexed),
+            "chunks_indexed": int(chunks_indexed),
+            "avg_chunks_per_book": avg_chunks,
+            "total_indexed_characters": int(total_chars),
+            "db_size_bytes": int(db_size_bytes),
+            "last_indexed_at": last_indexed or "",
+        }
+
     def _build_match_query(self, term):
         tokens = [t for t in re.split(r"\s+", term) if t]
         if not tokens:
@@ -263,6 +291,49 @@ class EpubFTSIndex:
                     except sqlite3.OperationalError:
                         return []
         return [int(book_id) for (book_id, __) in rows]
+
+    def search_details(self, term, limit=20):
+        query = strip_search_term(term)
+        if not query:
+            return []
+
+        with self._lock:
+            with self._connect() as conn:
+                self._init_schema(conn)
+                sql = (
+                    "SELECT book_id, section, "
+                    "snippet(epub_fts, 2, '[', ']', ' ... ', 18) AS snippet_text, "
+                    "bm25(epub_fts) AS rank "
+                    "FROM epub_fts WHERE epub_fts MATCH ? "
+                    "ORDER BY rank LIMIT ?"
+                )
+                fetch_limit = max(int(limit) * 6, int(limit))
+                try:
+                    rows = conn.execute(sql, (query, fetch_limit)).fetchall()
+                except sqlite3.OperationalError:
+                    fallback = self._build_match_query(term)
+                    if not fallback:
+                        return []
+                    try:
+                        rows = conn.execute(sql, (fallback, fetch_limit)).fetchall()
+                    except sqlite3.OperationalError:
+                        return []
+
+        results = []
+        seen = set()
+        for book_id, section, snippet_text, rank in rows:
+            if book_id in seen:
+                continue
+            seen.add(book_id)
+            results.append({
+                "book_id": int(book_id),
+                "section": section or "",
+                "snippet": snippet_text or "",
+                "rank": float(rank) if rank is not None else 0.0,
+            })
+            if len(results) >= int(limit):
+                break
+        return results
 
 
 def strip_search_term(term):

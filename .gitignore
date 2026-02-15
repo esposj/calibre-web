@@ -23,6 +23,8 @@ vendor/
 
 # calibre-web
 *.db
+*.db-wal
+*.db-shm
 *.log
 cps/cache
 

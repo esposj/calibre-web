@@ -212,7 +212,7 @@ class EpubFTSIndex:
             (book_id, file_path, stat_result.st_mtime, stat_result.st_size, datetime.utcnow().isoformat()),
         )
 
-    def sync_from_rows(self, rows, base_book_path, force=False):
+    def sync_from_rows(self, rows, base_book_path, force=False, progress_callback=None):
         now = datetime.utcnow().timestamp()
         if not force and now - self._last_sync < _SYNC_INTERVAL_SECONDS:
             return {"indexed": 0, "removed": 0, "seen": 0}
@@ -233,6 +233,8 @@ class EpubFTSIndex:
                 seen_ids = set()
                 indexed_count = 0
                 removed_count = 0
+                total_rows = len(rows)
+                processed_count = 0
 
                 for row in rows:
                     book_id = int(row[0])
@@ -240,6 +242,7 @@ class EpubFTSIndex:
                     book_name = row[2]
                     epub_path = os.path.join(base_book_path, book_rel_path, book_name + ".epub")
                     seen_ids.add(book_id)
+                    processed_count += 1
 
                     try:
                         stat_result = os.stat(epub_path)
@@ -247,16 +250,22 @@ class EpubFTSIndex:
                         conn.execute("DELETE FROM epub_fts WHERE book_id = ?", (book_id,))
                         conn.execute("DELETE FROM epub_fts_meta WHERE book_id = ?", (book_id,))
                         removed_count += 1
+                        if progress_callback:
+                            progress_callback(processed_count, total_rows, indexed_count, removed_count)
                         continue
 
                     meta = existing.get(book_id)
                     if not force and meta is not None:
                         _, mtime, size = meta
                         if mtime == stat_result.st_mtime and size == stat_result.st_size:
+                            if progress_callback:
+                                progress_callback(processed_count, total_rows, indexed_count, removed_count)
                             continue
 
                     self._reindex_book(conn, book_id, epub_path, stat_result)
                     indexed_count += 1
+                    if progress_callback:
+                        progress_callback(processed_count, total_rows, indexed_count, removed_count)
 
                 stale_ids = [book_id for book_id in existing if book_id not in seen_ids]
                 if stale_ids:

@@ -27,6 +27,16 @@ $(function() {
     var $csrf = $("input[name='csrf_token']").first();
     var selectedLabel = $toolbar.data("bulkSelectedLabel") || "selected";
     var actionLabel = $toolbar.data("bulkActionLabel") || "Add selected to shelf";
+    var errorLabel = $toolbar.data("bulkErrorLabel") || "Could not prepare selected books for bulk shelf action";
+
+    function showBulkError(text) {
+        $("#flash_bulk_error").closest(".row-fluid.text-center").remove();
+        $(".navbar").after(
+            "<div class=\"row-fluid text-center\">" +
+                "<div id=\"flash_bulk_error\" class=\"alert alert-danger\">" + text + "</div>" +
+            "</div>"
+        );
+    }
 
     function toggleModalLinks(disabled) {
         $(".bulk-cover-link").each(function() {
@@ -150,6 +160,9 @@ $(function() {
                 }));
                 $("body").append($form);
                 $form.submit();
+            },
+            error: function() {
+                showBulkError(errorLabel);
             }
         });
     });

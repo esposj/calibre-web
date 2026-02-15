@@ -430,6 +430,29 @@ input.pill:not(:checked) + label .glyphicon { display: none; }
   min-width: 180px;
 }
 
+.bulk-shelf-toolbar .bulk-green-btn {
+  color: #fff;
+  background-color: #45b29d;
+  border-color: #3ea592;
+}
+
+.bulk-shelf-toolbar .bulk-green-btn:hover,
+.bulk-shelf-toolbar .bulk-green-btn:focus,
+.bulk-shelf-toolbar .bulk-green-btn:active,
+.bulk-shelf-toolbar .bulk-green-btn.active {
+  color: #fff;
+  background-color: #3b9f8c;
+  border-color: #338a79;
+}
+
+.bulk-shelf-toolbar .bulk-green-btn.disabled,
+.bulk-shelf-toolbar .bulk-green-btn[disabled],
+fieldset[disabled] .bulk-shelf-toolbar .bulk-green-btn {
+  color: #fff;
+  background-color: #81cdbf;
+  border-color: #81cdbf;
+}
+
 body.bulk-shelf-mode .book.bulk-select-enabled .cover {
   cursor: pointer;
 }

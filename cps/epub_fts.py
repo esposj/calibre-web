@@ -41,6 +41,12 @@ class EpubFTSIndex:
     def db_path(self):
         return self._db_path
 
+    def should_sync(self, force=False):
+        if force:
+            return True
+        now = datetime.utcnow().timestamp()
+        return (now - self._last_sync) >= _SYNC_INTERVAL_SECONDS
+
     def _connect(self):
         conn = sqlite3.connect(self._db_path)
         conn.execute("PRAGMA journal_mode=WAL")

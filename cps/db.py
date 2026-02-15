@@ -996,12 +996,13 @@ class CalibreDB:
                 log.debug("FTS5 search failed for term '{}', using fallback: {}".format(term, ex))
 
         try:
-            epub_rows = (self.session.query(Books.id, Books.path, Data.name)
-                         .join(Data)
-                         .filter(func.lower(Data.format) == "epub")
-                         .all())
             epub_fts = get_epub_fts_index(ub.app_DB_path)
-            epub_fts.sync_from_rows(epub_rows, config.get_book_path())
+            if epub_fts.should_sync():
+                epub_rows = (self.session.query(Books.id, Books.path, Data.name)
+                             .join(Data)
+                             .filter(func.lower(Data.format) == "epub")
+                             .all())
+                epub_fts.sync_from_rows(epub_rows, config.get_book_path())
             epub_fts_ids = epub_fts.search(term)
         except Exception as ex:
             log.debug("EPUB FTS search failed for term '{}': {}".format(term, ex))

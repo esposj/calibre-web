@@ -423,13 +423,16 @@ def render_prepare_search_form(cc):
 
 def render_search_results(term, offset=None, order=None, limit=None):
     hide_shelved = _is_true_arg(request.args.get("hide_shelved"))
+    show_all = _is_true_arg(request.args.get("show_all"))
+    effective_offset = None if show_all else offset
+    effective_limit = None if show_all else limit
     if term:
         join = db.books_series_link, db.Books.id == db.books_series_link.c.book, db.Series
         entries, result_count, pagination = calibre_db.get_search_results(term,
                                                                           config,
-                                                                          offset,
+                                                                          effective_offset,
                                                                           order,
-                                                                          limit,
+                                                                          effective_limit,
                                                                           *join,
                                                                           exclude_shelved=hide_shelved)
     else:
@@ -447,10 +450,12 @@ def render_search_results(term, offset=None, order=None, limit=None):
                                  hide_shelved=hide_shelved,
                                  hide_shelved_query="1" if hide_shelved else None,
                                  hide_shelved_toggle_query=None if hide_shelved else "1",
+                                 show_all=show_all,
+                                 show_all_query="1" if show_all else None,
+                                 show_all_toggle_query=None if show_all else "1",
                                  current_sort=current_sort,
                                  entries=entries,
                                  result_count=result_count,
                                  title=_("Search"),
                                  page="search",
                                  order=order[1])
-

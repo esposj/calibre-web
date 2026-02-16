@@ -65,20 +65,58 @@ def _init_configuration(settings_path):
 
 
 def _render_progress_panel(processed, total, indexed, removed):
+    panel = _progress_panel_lines(processed, total, indexed, removed)
+    for line in panel:
+        print(line)
+
+
+def _progress_panel_lines(processed, total, indexed, removed):
+    display_processed = min(int(processed), int(total)) if total else int(processed)
     width = 24
     done = 0
     if total:
-        done = int((float(processed) / float(total)) * width)
+        done = int((float(display_processed) / float(total)) * width)
     done = max(0, min(width, done))
     bar = "#" * done + "-" * (width - done)
-    percent = 0.0 if not total else (float(processed) / float(total)) * 100.0
-    print("+--------------------------------------+")
-    print("| EPUB FTS Rebuild                     |")
-    print("| [{}] {:>5.1f}%            |".format(bar, percent))
-    print("| processed: {:>5}/{:<5}              |".format(processed, total))
-    print("| indexed:   {:>5}  removed: {:>5}      |".format(indexed, removed))
-    print("| updated:   {} UTC |".format(datetime.utcnow().strftime("%H:%M:%S")))
-    print("+--------------------------------------+")
+    percent = 0.0 if not total else (float(display_processed) / float(total)) * 100.0
+
+    border = "+--------------------------------------+"
+
+    def fmt(content):
+        return "| {:<36} |".format(content[:36])
+
+    return [
+        border,
+        fmt("EPUB FTS Rebuild"),
+        fmt("[{}] {:>5.1f}%".format(bar, percent)),
+        fmt("processed: {:>5}/{:<5}".format(display_processed, total)),
+        fmt("indexed: {:>6}  removed: {:>6}".format(indexed, removed)),
+        fmt("updated: {} UTC".format(datetime.utcnow().strftime("%H:%M:%S"))),
+        border,
+    ]
+
+
+class ProgressPanelRenderer:
+    def __init__(self, stream=None):
+        self.stream = stream or sys.stdout
+        term = os.environ.get("TERM", "")
+        self._interactive = bool(getattr(self.stream, "isatty", lambda: False)()) and term.lower() != "dumb"
+        self._line_count = 0
+
+    def render(self, processed, total, indexed, removed):
+        lines = _progress_panel_lines(processed, total, indexed, removed)
+        output = "\n".join(lines) + "\n"
+        if self._interactive and self._line_count:
+            self.stream.write("\x1b[{}F".format(self._line_count))
+            self.stream.write("\x1b[J")
+        self.stream.write(output)
+        self.stream.flush()
+        self._line_count = len(lines)
+
+    def finish(self):
+        if self._interactive and self._line_count:
+            self.stream.write("\n")
+            self.stream.flush()
 
 
 def build_index(force_rebuild=False, show_progress=False, workers=1):
@@ -101,10 +139,12 @@ def build_index(force_rebuild=False, show_progress=False, workers=1):
     if force_rebuild:
         index.clear()
 
+    renderer = ProgressPanelRenderer() if show_progress else None
+
     def progress_callback(processed, total, indexed, removed):
         # keep output readable on large libraries; print every 10 books and final line
         if show_progress and (processed % 10 == 0 or processed == total):
-            _render_progress_panel(processed, total, indexed, removed)
+            renderer.render(processed, total, indexed, removed)
 
     result = index.sync_from_rows(
         epub_rows,
@@ -113,6 +153,8 @@ def build_index(force_rebuild=False, show_progress=False, workers=1):
         progress_callback=progress_callback if show_progress else None,
         workers=workers,
     )
+    if renderer:
+        renderer.finish()
     return result, len(epub_rows), index
 
 

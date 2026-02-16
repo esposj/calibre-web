@@ -248,7 +248,6 @@ class EpubFTSIndex:
                     book_name = row[2]
                     epub_path = os.path.join(base_book_path, book_rel_path, book_name + ".epub")
                     seen_ids.add(book_id)
-                    processed_count += 1
 
                     try:
                         stat_result = os.stat(epub_path)
@@ -256,6 +255,7 @@ class EpubFTSIndex:
                         conn.execute("DELETE FROM epub_fts WHERE book_id = ?", (book_id,))
                         conn.execute("DELETE FROM epub_fts_meta WHERE book_id = ?", (book_id,))
                         removed_count += 1
+                        processed_count += 1
                         if progress_callback:
                             progress_callback(processed_count, total_rows, indexed_count, removed_count)
                         continue

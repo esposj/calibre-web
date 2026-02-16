@@ -83,7 +83,7 @@
             </div>
 
           </div>
-          <div class="bulk-shelf-toolbar" data-bulk-shelf-toolbar data-bulk-selected-label="{{_('selected')}}" data-bulk-action-label="{{_('Add selected to shelf')}}" data-bulk-error-label="{{_('Could not prepare selected books for bulk shelf action')}}">
+          <div class="bulk-shelf-toolbar" data-bulk-shelf-toolbar data-bulk-selected-label="{{_('selected')}}" data-bulk-action-label="{{_('Add selected to shelf')}}" data-bulk-error-label="{{_('Could not prepare selected books for bulk shelf action')}}" data-bulk-create-error-label="{{_('Could not create shelf')}}" data-bulk-create-required-label="{{_('Shelf title is required')}}" data-bulk-public-suffix-label="{{_('(Public)')}}">
             <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-toggle>{{_('Bulk shelf mode')}}</button>
             <div class="bulk-shelf-controls hidden" data-bulk-controls>
               <span class="label label-default" data-bulk-count>0 {{_('selected')}}</span>
@@ -95,6 +95,13 @@
                   {% endif %}
                 {% endfor %}
               </select>
+              <input type="text" class="form-control input-sm" data-bulk-new-shelf-name placeholder="{{_('New shelf name')}}">
+              {% if current_user.role_edit_shelfs() %}
+                <label class="checkbox-inline">
+                  <input type="checkbox" data-bulk-new-shelf-public> {{_('Public')}}
+                </label>
+              {% endif %}
+              <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-create-shelf disabled>{{_('Create shelf')}}</button>
               <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-select-all>{{_('Select all')}}</button>
               <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-select-none disabled>{{_('Select none')}}</button>
               <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-add disabled>{{_('Add selected to shelf')}}</button>

@@ -22,6 +22,9 @@ $(function() {
     var $bulkControls = $toolbar.find("[data-bulk-controls]");
     var $bulkCount = $toolbar.find("[data-bulk-count]");
     var $bulkShelfSelect = $toolbar.find("[data-bulk-shelf-select]");
+    var $bulkNewShelfName = $toolbar.find("[data-bulk-new-shelf-name]");
+    var $bulkNewShelfPublic = $toolbar.find("[data-bulk-new-shelf-public]");
+    var $bulkCreateShelf = $toolbar.find("[data-bulk-create-shelf]");
     var $bulkAdd = $toolbar.find("[data-bulk-add]");
     var $bulkClear = $toolbar.find("[data-bulk-clear]");
     var $bulkSelectAll = $toolbar.find("[data-bulk-select-all]");
@@ -30,6 +33,9 @@ $(function() {
     var selectedLabel = $toolbar.data("bulkSelectedLabel") || "selected";
     var actionLabel = $toolbar.data("bulkActionLabel") || "Add selected to shelf";
     var errorLabel = $toolbar.data("bulkErrorLabel") || "Could not prepare selected books for bulk shelf action";
+    var createErrorLabel = $toolbar.data("bulkCreateErrorLabel") || "Could not create shelf";
+    var createRequiredLabel = $toolbar.data("bulkCreateRequiredLabel") || "Shelf title is required";
+    var publicSuffixLabel = $toolbar.data("bulkPublicSuffixLabel") || "(Public)";
     var activeIndex = -1;
 
     function showBulkError(text) {
@@ -187,6 +193,7 @@ $(function() {
         $bulkSelectAll.prop("disabled", !hasVisibleBooks || allVisibleSelected);
         $bulkSelectNone.prop("disabled", !hasSelection);
         $bulkAdd.prop("disabled", !hasSelection || !$bulkShelfSelect.val());
+        $bulkCreateShelf.prop("disabled", !$bulkNewShelfName.val() || !$bulkNewShelfName.val().trim());
         $bulkAdd.text(actionLabel);
     }
 
@@ -337,6 +344,60 @@ $(function() {
     });
 
     $bulkShelfSelect.on("change", refreshControls);
+    $bulkNewShelfName.on("input", refreshControls);
+
+    $bulkCreateShelf.on("click", function() {
+        var title = ($bulkNewShelfName.val() || "").trim();
+        if (!title) {
+            showBulkError(createRequiredLabel);
+            refreshControls();
+            return;
+        }
+
+        $.ajax({
+            method: "post",
+            url: getPath() + "/shelf/ajax/create",
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            data: JSON.stringify({
+                title: title,
+                is_public: $bulkNewShelfPublic.is(":checked")
+            }),
+            headers: {
+                "X-CSRFToken": $csrf.val()
+            }
+        }).done(function(response) {
+            if (!response || !response.id) {
+                showBulkError(createErrorLabel);
+                return;
+            }
+
+            var shelfId = String(response.id);
+            var isPublic = parseInt(response.is_public, 10) === 1;
+            var shelfName = response.name || title;
+            var optionText = shelfName + (isPublic ? " " + publicSuffixLabel : "");
+            var $existingOption = $bulkShelfSelect.find("option[value='" + shelfId + "']");
+            if ($existingOption.length) {
+                $existingOption.text(optionText);
+            } else {
+                $("<option>").val(shelfId).text(optionText).appendTo($bulkShelfSelect);
+            }
+            $bulkShelfSelect.val(shelfId);
+            $bulkNewShelfName.val("");
+            if ($bulkNewShelfPublic.length) {
+                $bulkNewShelfPublic.prop("checked", false);
+            }
+            refreshControls();
+        }).fail(function(jqXHR) {
+            var message = createErrorLabel;
+            if (jqXHR && jqXHR.responseJSON && jqXHR.responseJSON.error) {
+                message = jqXHR.responseJSON.error;
+            } else if (jqXHR && jqXHR.responseText) {
+                message = jqXHR.responseText;
+            }
+            showBulkError(message);
+        });
+    });
 
     $bulkAdd.on("click", function() {
         var shelfId = $bulkShelfSelect.val();

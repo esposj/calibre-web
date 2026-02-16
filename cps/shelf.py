@@ -23,7 +23,7 @@
 import sys
 from datetime import datetime, timezone
 
-from flask import Blueprint, flash, redirect, request, url_for, abort
+from flask import Blueprint, flash, redirect, request, url_for, abort, jsonify
 from flask_babel import gettext as _
 from .cw_login import current_user
 from sqlalchemy.exc import InvalidRequestError, OperationalError
@@ -262,6 +262,46 @@ def create_shelf():
     return create_edit_shelf(shelf, page_title=_("Create a Shelf"), page="shelfcreate")
 
 
+@shelf.route("/shelf/ajax/create", methods=["POST"])
+@user_login_required
+def create_shelf_ajax():
+    to_save = request.get_json(silent=True) or {}
+    if not isinstance(to_save, dict):
+        return jsonify({"error": _("Invalid request")}), 400
+
+    shelf_title = str(to_save.get("title", "")).strip()
+    if not shelf_title:
+        return jsonify({"error": _("Shelf title is required")}), 400
+
+    is_public = 1 if bool(to_save.get("is_public")) else 0
+    if is_public and not current_user.role_edit_shelfs():
+        return jsonify({"error": _("Sorry you are not allowed to create a public shelf")}), 403
+
+    if not _is_shelf_name_unique(shelf_title, is_public):
+        if is_public:
+            return jsonify({"error": _("A public shelf with the name '%(title)s' already exists.", title=shelf_title)}), 409
+        return jsonify({"error": _("A private shelf with the name '%(title)s' already exists.", title=shelf_title)}), 409
+
+    shelf = ub.Shelf(name=shelf_title, is_public=is_public, user_id=int(current_user.id))
+    ub.session.add(shelf)
+    try:
+        ub.session.commit()
+    except (OperationalError, InvalidRequestError) as ex:
+        ub.session.rollback()
+        log.error_or_exception(ex)
+        return jsonify({"error": _("Oops! Database Error: %(error)s.", error=ex.orig)}), 500
+    except Exception as ex:
+        ub.session.rollback()
+        log.error_or_exception(ex)
+        return jsonify({"error": _("There was an error")}), 500
+
+    return jsonify({
+        "id": shelf.id,
+        "name": shelf.name,
+        "is_public": int(shelf.is_public),
+    }), 201
+
+
 @shelf.route("/shelf/edit/<int:shelf_id>", methods=["GET", "POST"])
 @user_login_required
 def edit_shelf(shelf_id):
@@ -409,6 +449,22 @@ def create_edit_shelf(shelf, page_title, page, shelf_id=False):
 
 
 def check_shelf_is_unique(title, is_public, shelf_id=False):
+    is_shelf_name_unique = _is_shelf_name_unique(title, is_public, shelf_id)
+    if is_shelf_name_unique:
+        return True
+
+    if is_public == 1:
+        log.error("A public shelf with the name '{}' already exists.".format(title))
+        flash(_("A public shelf with the name '%(title)s' already exists.", title=title),
+              category="error")
+    else:
+        log.error("A private shelf with the name '{}' already exists.".format(title))
+        flash(_("A private shelf with the name '%(title)s' already exists.", title=title),
+              category="error")
+    return False
+
+
+def _is_shelf_name_unique(title, is_public, shelf_id=False):
     if shelf_id:
         ident = ub.Shelf.id != shelf_id
     else:
@@ -418,22 +474,12 @@ def check_shelf_is_unique(title, is_public, shelf_id=False):
                                    .filter((ub.Shelf.name == title) & (ub.Shelf.is_public == 1)) \
                                    .filter(ident) \
                                    .first() is None
-
-        if not is_shelf_name_unique:
-            log.error("A public shelf with the name '{}' already exists.".format(title))
-            flash(_("A public shelf with the name '%(title)s' already exists.", title=title),
-                  category="error")
     else:
         is_shelf_name_unique = ub.session.query(ub.Shelf) \
                                    .filter((ub.Shelf.name == title) & (ub.Shelf.is_public == 0) &
                                            (ub.Shelf.user_id == int(current_user.id))) \
                                    .filter(ident) \
                                    .first() is None
-
-        if not is_shelf_name_unique:
-            log.error("A private shelf with the name '{}' already exists.".format(title))
-            flash(_("A private shelf with the name '%(title)s' already exists.", title=title),
-                  category="error")
     return is_shelf_name_unique
 
 

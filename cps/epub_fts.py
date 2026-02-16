@@ -195,7 +195,7 @@ class EpubFTSIndex:
                     text_content = " ".join(t.strip() for t in tree.xpath("//text()") if t and t.strip())
                     for chunk in self._split_text(text_content):
                         sections.append((section_name[:200], chunk))
-        except (BadZipFile, OSError, IOError, etree.XMLSyntaxError, IndexError) as ex:
+        except (BadZipFile, OSError, IOError, KeyError, etree.XMLSyntaxError, IndexError) as ex:
             log.debug("Unable to index EPUB '%s': %s", epub_file, ex)
         return sections
 

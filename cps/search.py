@@ -37,6 +37,10 @@ search = Blueprint('search', __name__)
 log = logger.create()
 
 
+def _is_true_arg(value):
+    return str(value or "").strip().lower() in ("1", "true", "yes", "on")
+
+
 @search.route("/search", methods=["GET"])
 @login_required_if_no_ano
 def simple_search():
@@ -418,6 +422,7 @@ def render_prepare_search_form(cc):
 
 
 def render_search_results(term, offset=None, order=None, limit=None):
+    hide_shelved = _is_true_arg(request.args.get("hide_shelved"))
     if term:
         join = db.books_series_link, db.Books.id == db.books_series_link.c.book, db.Series
         entries, result_count, pagination = calibre_db.get_search_results(term,
@@ -425,21 +430,27 @@ def render_search_results(term, offset=None, order=None, limit=None):
                                                                           offset,
                                                                           order,
                                                                           limit,
-                                                                          *join)
+                                                                          *join,
+                                                                          exclude_shelved=hide_shelved)
     else:
         entries = list()
         order = [None, None]
         pagination = result_count = None
+
+    current_sort = order[1] if order and order[1] else "stored"
 
     return render_title_template('search.html',
                                  searchterm=term,
                                  pagination=pagination,
                                  query=term,
                                  adv_searchterm=term,
+                                 hide_shelved=hide_shelved,
+                                 hide_shelved_query="1" if hide_shelved else None,
+                                 hide_shelved_toggle_query=None if hide_shelved else "1",
+                                 current_sort=current_sort,
                                  entries=entries,
                                  result_count=result_count,
                                  title=_("Search"),
                                  page="search",
                                  order=order[1])
-
 

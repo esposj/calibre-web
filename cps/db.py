@@ -963,7 +963,7 @@ class CalibreDB:
         return self.session.query(Books) \
             .filter(and_(Books.authors.any(and_(*q)), func.lower(Books.title).ilike("%" + title + "%"))).first()
 
-    def search_query(self, term, config, *join):
+    def search_query(self, term, config, *join, exclude_shelved=False):
         term = strip_whitespaces(term).lower()
         self.create_functions()
 
@@ -1010,6 +1010,13 @@ class CalibreDB:
         # Build base query with optimized joins
         base_query = self.generate_linked_query(config.config_read_column, Books)
         base_query = base_query.filter(self.common_filters(True))
+        if exclude_shelved:
+            in_any_shelf = (
+                self.session.query(ub.BookShelf.id)
+                .filter(ub.BookShelf.book_id == Books.id)
+                .exists()
+            )
+            base_query = base_query.filter(~in_any_shelf)
 
         # Apply eager loading for authors to avoid N+1 queries
         base_query = base_query.options(selectinload(Books.authors))
@@ -1087,7 +1094,7 @@ class CalibreDB:
         return cc
 
     # read search results from calibre-database and return it (function is used for feed and simple search
-    def get_search_results(self, term, config, offset=None, order=None, limit=None, *join):
+    def get_search_results(self, term, config, offset=None, order=None, limit=None, *join, exclude_shelved=False):
         order = order[0] if order else [Books.sort]
         pagination = None
 
@@ -1096,7 +1103,7 @@ class CalibreDB:
             limit_int = int(limit)
 
             # Use LIMIT+1 pattern to estimate total count without expensive count()
-            query = self.search_query(term, config, *join).order_by(*order)
+            query = self.search_query(term, config, *join, exclude_shelved=exclude_shelved).order_by(*order)
             result = query.limit(offset + limit_int + 1).all()
 
             # Check if there are more results
@@ -1111,7 +1118,7 @@ class CalibreDB:
             pagination = Pagination((offset / limit_int + 1), limit_int, result_count)
         else:
             # No pagination, fetch all results
-            result = self.search_query(term, config, *join).order_by(*order).all()
+            result = self.search_query(term, config, *join, exclude_shelved=exclude_shelved).order_by(*order).all()
             result_count = len(result)
 
         ub.store_combo_ids(result)

@@ -81,7 +81,7 @@ def _render_progress_panel(processed, total, indexed, removed):
     print("+--------------------------------------+")
 
 
-def build_index(force_rebuild=False, show_progress=False):
+def build_index(force_rebuild=False, show_progress=False, workers=1):
     lib_session = calibre_db.connect()
     if lib_session is None:
         raise RuntimeError("Unable to connect to calibre metadata database")
@@ -111,6 +111,7 @@ def build_index(force_rebuild=False, show_progress=False):
         config.get_book_path(),
         force=force_rebuild,
         progress_callback=progress_callback if show_progress else None,
+        workers=workers,
     )
     return result, len(epub_rows), index
 
@@ -181,6 +182,12 @@ def main():
         action="store_true",
         help="Skip sync before search. Useful for fast repeated queries."
     )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=1,
+        help="Number of parallel EPUB extraction workers during sync/rebuild (default: 1)."
+    )
     args = parser.parse_args()
 
     settings_path = _resolve_settings_path(args.settings)
@@ -197,17 +204,23 @@ def main():
     did_sync = False
     result = {"indexed": 0, "removed": 0, "seen": 0}
     epub_total = 0
+    workers = max(1, int(args.workers or 1))
     if not args.stats_only:
         should_sync = True
         if args.search and args.no_sync and not args.rebuild:
             should_sync = False
         if should_sync:
-            result, epub_total, index = build_index(force_rebuild=args.rebuild, show_progress=args.rebuild)
+            result, epub_total, index = build_index(
+                force_rebuild=args.rebuild,
+                show_progress=args.rebuild,
+                workers=workers,
+            )
             did_sync = True
 
     stats = index.get_stats()
 
     if not args.stats_only:
+        print("Sync workers: {}".format(workers))
         print("EPUB rows discovered: {}".format(epub_total))
         print("Books indexed/updated: {}".format(result["indexed"]))
         print("Index rows removed: {}".format(result["removed"]))
@@ -223,7 +236,7 @@ def main():
 
     if args.search:
         if not args.no_sync and not did_sync:
-            sync_result, epub_total, __ = build_index(force_rebuild=False, show_progress=False)
+            sync_result, epub_total, __ = build_index(force_rebuild=False, show_progress=False, workers=workers)
             print("Synced before search: indexed={}, removed={}, seen={}".format(
                 sync_result["indexed"], sync_result["removed"], sync_result["seen"]
             ))

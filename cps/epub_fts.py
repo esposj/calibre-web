@@ -12,6 +12,7 @@ import posixpath
 import re
 import sqlite3
 import threading
+from concurrent import futures
 from datetime import datetime
 from zipfile import ZipFile, BadZipFile
 
@@ -198,8 +199,7 @@ class EpubFTSIndex:
             log.debug("Unable to index EPUB '%s': %s", epub_file, ex)
         return sections
 
-    def _reindex_book(self, conn, book_id, file_path, stat_result):
-        sections = self._extract_epub_sections(file_path)
+    def _write_book_sections(self, conn, book_id, file_path, stat_result, sections):
         conn.execute("DELETE FROM epub_fts WHERE book_id = ?", (book_id,))
         if sections:
             conn.executemany(
@@ -212,7 +212,11 @@ class EpubFTSIndex:
             (book_id, file_path, stat_result.st_mtime, stat_result.st_size, datetime.utcnow().isoformat()),
         )
 
-    def sync_from_rows(self, rows, base_book_path, force=False, progress_callback=None):
+    def _extract_job(self, book_id, file_path, stat_result):
+        sections = self._extract_epub_sections(file_path)
+        return book_id, file_path, stat_result, sections
+
+    def sync_from_rows(self, rows, base_book_path, force=False, progress_callback=None, workers=1):
         now = datetime.utcnow().timestamp()
         if not force and now - self._last_sync < _SYNC_INTERVAL_SECONDS:
             return {"indexed": 0, "removed": 0, "seen": 0}
@@ -235,6 +239,8 @@ class EpubFTSIndex:
                 removed_count = 0
                 total_rows = len(rows)
                 processed_count = 0
+                pending_reindex = []
+                workers = max(1, int(workers or 1))
 
                 for row in rows:
                     book_id = int(row[0])
@@ -258,14 +264,46 @@ class EpubFTSIndex:
                     if not force and meta is not None:
                         _, mtime, size = meta
                         if mtime == stat_result.st_mtime and size == stat_result.st_size:
+                            processed_count += 1
                             if progress_callback:
                                 progress_callback(processed_count, total_rows, indexed_count, removed_count)
                             continue
 
-                    self._reindex_book(conn, book_id, epub_path, stat_result)
-                    indexed_count += 1
-                    if progress_callback:
-                        progress_callback(processed_count, total_rows, indexed_count, removed_count)
+                    pending_reindex.append((book_id, epub_path, stat_result))
+
+                if pending_reindex:
+                    if workers <= 1:
+                        for book_id, epub_path, stat_result in pending_reindex:
+                            _, _, _, sections = self._extract_job(book_id, epub_path, stat_result)
+                            self._write_book_sections(conn, book_id, epub_path, stat_result, sections)
+                            indexed_count += 1
+                            processed_count += 1
+                            if progress_callback:
+                                progress_callback(processed_count, total_rows, indexed_count, removed_count)
+                    else:
+                        max_in_flight = max(1, workers * 4)
+                        next_idx = 0
+                        in_flight = set()
+                        with futures.ThreadPoolExecutor(max_workers=workers) as pool:
+                            while next_idx < len(pending_reindex) and len(in_flight) < max_in_flight:
+                                args = pending_reindex[next_idx]
+                                in_flight.add(pool.submit(self._extract_job, *args))
+                                next_idx += 1
+
+                            while in_flight:
+                                done, in_flight = futures.wait(in_flight, return_when=futures.FIRST_COMPLETED)
+                                for future in done:
+                                    book_id, epub_path, stat_result, sections = future.result()
+                                    self._write_book_sections(conn, book_id, epub_path, stat_result, sections)
+                                    indexed_count += 1
+                                    processed_count += 1
+                                    if progress_callback:
+                                        progress_callback(processed_count, total_rows, indexed_count, removed_count)
+
+                                while next_idx < len(pending_reindex) and len(in_flight) < max_in_flight:
+                                    args = pending_reindex[next_idx]
+                                    in_flight.add(pool.submit(self._extract_job, *args))
+                                    next_idx += 1
 
                 stale_ids = [book_id for book_id in existing if book_id not in seen_ids]
                 if stale_ids:

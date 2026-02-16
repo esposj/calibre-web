@@ -24,6 +24,8 @@ $(function() {
     var $bulkShelfSelect = $toolbar.find("[data-bulk-shelf-select]");
     var $bulkAdd = $toolbar.find("[data-bulk-add]");
     var $bulkClear = $toolbar.find("[data-bulk-clear]");
+    var $bulkSelectAll = $toolbar.find("[data-bulk-select-all]");
+    var $bulkSelectNone = $toolbar.find("[data-bulk-select-none]");
     var $csrf = $("input[name='csrf_token']").first();
     var selectedLabel = $toolbar.data("bulkSelectedLabel") || "selected";
     var actionLabel = $toolbar.data("bulkActionLabel") || "Add selected to shelf";
@@ -170,9 +172,20 @@ $(function() {
     }
 
     function refreshControls() {
+        var visibleBookIds = $("[data-bulk-book-id]:visible").map(function() {
+            return parseInt($(this).data("bulkBookId"), 10);
+        }).get().filter(function(id) {
+            return !!id;
+        });
+        var hasVisibleBooks = visibleBookIds.length > 0;
+        var allVisibleSelected = hasVisibleBooks && visibleBookIds.every(function(id) {
+            return $.inArray(id, selectedIds) > -1;
+        });
         var hasSelection = selectedIds.length > 0;
         $bulkCount.text(selectedIds.length + " " + selectedLabel);
         $bulkClear.prop("disabled", !hasSelection);
+        $bulkSelectAll.prop("disabled", !hasVisibleBooks || allVisibleSelected);
+        $bulkSelectNone.prop("disabled", !hasSelection);
         $bulkAdd.prop("disabled", !hasSelection || !$bulkShelfSelect.val());
         $bulkAdd.text(actionLabel);
     }
@@ -299,6 +312,26 @@ $(function() {
     });
 
     $bulkClear.on("click", function() {
+        resetSelection();
+        refreshControls();
+    });
+
+    $bulkSelectAll.on("click", function() {
+        if (!bulkModeEnabled) {
+            return;
+        }
+        $("[data-bulk-book-id]:visible").each(function() {
+            var bookId = parseInt($(this).data("bulkBookId"), 10);
+            if (!bookId || $.inArray(bookId, selectedIds) > -1) {
+                return;
+            }
+            selectedIds.push(bookId);
+            setSelected(bookId, true);
+        });
+        refreshControls();
+    });
+
+    $bulkSelectNone.on("click", function() {
         resetSelection();
         refreshControls();
     });

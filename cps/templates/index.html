@@ -79,6 +79,8 @@
             {% endif %}
           {% endfor %}
         </select>
+        <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-select-all>{{_('Select all')}}</button>
+        <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-select-none disabled>{{_('Select none')}}</button>
         <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-add disabled>{{_('Add selected to shelf')}}</button>
         <button type="button" class="btn btn-sm bulk-green-btn" data-bulk-clear disabled>{{_('Clear')}}</button>
       </div>

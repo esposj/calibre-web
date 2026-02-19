@@ -1,0 +1,45 @@
+.scrolling-reader-beta #main {
+    transition: background-color 0.2s linear;
+}
+
+.scrolling-reader-beta #scrolling-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e2e2e2;
+    flex-wrap: wrap;
+}
+
+.scrolling-reader-beta #scrolling-controls #chapter-select {
+    min-width: 220px;
+    max-width: 360px;
+}
+
+.scrolling-reader-beta #scroll-speed {
+    width: 180px;
+}
+
+.scrolling-reader-beta #speed-value {
+    min-width: 74px;
+    font-size: 12px;
+}
+
+.scrolling-reader-beta #prev,
+.scrolling-reader-beta #next {
+    display: none;
+}
+
+.scrolling-reader-beta .md-content .form-group {
+    margin-bottom: 12px;
+}
+
+.scrolling-reader-beta .md-content .inline-control {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.scrolling-reader-beta .md-content input[type="range"] {
+    width: 240px;
+}

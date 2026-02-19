@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>{{_('Scrolling Reader (Beta)')}} | {{title}}</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <link rel="apple-touch-icon" sizes="140x140" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/libs/normalize.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/popup.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader_scrolling_beta.css') }}">
+</head>
+<body class="epub scrolling-reader-beta">
+    <div id="sidebar">
+        <div id="panels">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <a id="show-Toc" class="show_view icon-list-1 active" data-view="Toc">TOC</a>
+            <a id="show-Bookmarks" class="show_view icon-bookmark" data-view="Bookmarks">Bookmarks</a>
+            <a id="back-button" data-view="Back to Books" href="{{ url_for('web.index') }}">Books</a>
+        </div>
+        <div id="tocView" class="view"></div>
+        <div id="bookmarksView" class="view">
+            <ul id="bookmarks"></ul>
+        </div>
+    </div>
+    <div id="main">
+        <div id="titlebar">
+            <div id="opener">
+                <a id="slider" class="icon-menu">Menu</a>
+            </div>
+            <div id="metainfo">
+                <span id="book-title"></span>
+                <span id="title-seperator">&nbsp;&nbsp;–&nbsp;&nbsp;</span>
+                <span id="chapter-title"></span>
+            </div>
+            <div id="title-controls">
+                <a id="bookmark" class="icon-bookmark-empty">Bookmark</a>
+                <a id="setting" class="icon-cog">{{_('Settings')}}</a>
+                <a id="fullscreen" class="icon-resize-full">Fullscreen</a>
+            </div>
+        </div>
+        <div id="scrolling-controls">
+            <button type="button" id="chapter-prev" class="btn btn-sm btn-success">{{_('Prev chapter')}}</button>
+            <select id="chapter-select" class="form-control input-sm" data-empty-label="{{_('No chapters')}}"></select>
+            <button type="button" id="chapter-next" class="btn btn-sm btn-success">{{_('Next chapter')}}</button>
+            <button type="button" id="scroll-play-pause" class="btn btn-sm btn-success" data-play-label="{{_('Play')}}" data-pause-label="{{_('Pause')}}">{{_('Play')}}</button>
+            <button type="button" id="speed-slower" class="btn btn-sm btn-success">{{_('Slower')}}</button>
+            <input type="range" id="scroll-speed" min="20" max="320" step="5" value="70">
+            <button type="button" id="speed-faster" class="btn btn-sm btn-success">{{_('Faster')}}</button>
+            <span id="speed-value">70 px/s</span>
+        </div>
+        <div id="divider"></div>
+        <div id="viewer"></div>
+        <div class="read-footer">
+            <div id="pages-count"></div>
+            <div id="progress">0%</div>
+        </div>
+        <div id="loader">
+            <img src="{{ url_for('static', filename='img/loader.gif') }}">
+        </div>
+    </div>
+    <div class="modal md-effect-1" id="settings-modal">
+        <div class="md-content">
+            <h3>{{_('Scrolling Reader (Beta) Settings')}}</h3>
+            <div class="form-group" id="beta-themes">
+                <label>{{_('Theme')}}</label>
+                <button type="button" data-theme="lightTheme" class="btn btn-sm btn-success">{{_('Light')}}</button>
+                <button type="button" data-theme="darkTheme" class="btn btn-sm btn-success">{{_('Dark')}}</button>
+                <button type="button" data-theme="sepiaTheme" class="btn btn-sm btn-success">{{_('Sepia')}}</button>
+            </div>
+            <div class="form-group">
+                <label>{{_('Typeface')}}</label>
+                <select id="beta-font-family" class="form-control input-sm">
+                    <option value="default">{{_('Default')}}</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Arial">Arial</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Verdana">Verdana</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>{{_('Font Size')}}</label>
+                <div class="inline-control">
+                    <button type="button" id="font-size-decrease" class="btn btn-sm btn-success">-</button>
+                    <span id="font-size-display">100%</span>
+                    <button type="button" id="font-size-increase" class="btn btn-sm btn-success">+</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="beta-line-spacing">{{_('Line spacing')}}</label>
+                <input type="range" id="beta-line-spacing" min="1.1" max="2.2" step="0.1" value="1.5">
+                <span id="beta-line-spacing-value">1.5</span>
+            </div>
+            <div class="form-group">
+                <label for="beta-side-margin">{{_('Side margin')}}</label>
+                <input type="range" id="beta-side-margin" min="0" max="120" step="5" value="40">
+                <span id="beta-side-margin-value">40px</span>
+            </div>
+            <div class="form-group">
+                <label for="beta-text-width">{{_('Text width')}}</label>
+                <input type="range" id="beta-text-width" min="500" max="1200" step="20" value="820">
+                <span id="beta-text-width-value">820px</span>
+            </div>
+            <div class="closer icon-cancel-circled"></div>
+        </div>
+    </div>
+    <div class="overlay"></div>
+    <script src="{{ url_for('static', filename='js/libs/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/compress/jszip_epub.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/libs/epub.min.js') }}"></script>
+    <script type="text/javascript">
+        window.calibre = {
+            filePath: "{{ url_for('static', filename='js/libs/') }}",
+            cssPath: "{{ url_for('static', filename='css/') }}",
+            bookmarkUrl: "{{ url_for('web.set_bookmark', book_id=bookid, book_format=book_format) }}",
+            bookUrl: "{{ url_for('web.serve_book', book_id=bookid, book_format=book_format, anyname='file.epub') }}",
+            bookmark: "{{ bookmark.bookmark_key if bookmark != None }}",
+            useBookmarks: "{{ current_user.is_authenticated | tojson }}"
+        };
+        window.themes = {
+            "darkTheme": {
+                "bgColor": "#202124",
+                "css_path": "{{ url_for('static', filename='css/epub_themes.css') }}",
+                "title-color": "#fff"
+            },
+            "lightTheme": {
+                "bgColor": "white",
+                "css_path": "{{ url_for('static', filename='css/epub_themes.css') }}",
+                "title-color": "#4f4f4f"
+            },
+            "sepiaTheme": {
+                "bgColor": "#ece1ca",
+                "css_path": "{{ url_for('static', filename='css/epub_themes.css') }}",
+                "title-color": "#4f4f4f"
+            }
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/libs/screenfull.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/libs/reader.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/reading/epub_scrolling_beta.js') }}"></script>
+</body>
+</html>

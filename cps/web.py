@@ -1665,6 +1665,33 @@ def read_book(book_id, book_format):
         return redirect(url_for("web.index"))
 
 
+@web.route("/read-beta/<int:book_id>/<book_format>")
+@login_required_if_no_ano
+@viewer_required
+def read_book_scrolling_beta(book_id, book_format):
+    book = calibre_db.get_filtered_book(book_id)
+
+    if not book:
+        flash(_("Oops! Selected book is unavailable. File does not exist or is not accessible"),
+              category="error")
+        log.debug("Selected book is unavailable. File does not exist or is not accessible")
+        return redirect(url_for("web.index"))
+
+    if book_format.lower() not in ("epub", "kepub"):
+        flash(_("Scrolling Reader (Beta) currently supports EPUB/Kepub only."), category="error")
+        return redirect(url_for("web.read_book", book_id=book_id, book_format=book_format))
+
+    bookmark = None
+    if current_user.is_authenticated:
+        bookmark = ub.session.query(ub.Bookmark).filter(and_(ub.Bookmark.user_id == int(current_user.id),
+                                                             ub.Bookmark.book_id == book_id,
+                                                             ub.Bookmark.format == book_format.upper())).first()
+
+    log.debug("Start [k]epub scrolling beta reader for %d", book_id)
+    return render_title_template('read_scroll_beta.html', bookid=book_id, title=book.title, bookmark=bookmark,
+                                 book_format=book_format)
+
+
 @web.route("/book/<int:book_id>")
 @login_required_if_no_ano
 def show_book(book_id):

@@ -90,6 +90,11 @@
                                         <li><a target="_blank"
                                                href="{{ url_for('web.read_book', book_id=entry.id, book_format=format) }}">{{ format }}</a>
                                         </li>
+                                        {% if format in ["epub", "kepub"] %}
+                                            <li><a target="_blank"
+                                                   href="{{ url_for('web.read_book_scrolling_beta', book_id=entry.id, book_format=format) }}">{{ _('Scrolling Reader (Beta)') }} - {{ format }}</a>
+                                            </li>
+                                        {% endif %}
                                     {% endfor %}
                                 </ul>
                             {% else %}
@@ -98,6 +103,12 @@
                                    id="readbtn" class="btn btn-primary" role="button"><span
                                         class="glyphicon glyphicon-book"></span> {{ _('Read in Browser') }}
                                     - {{ entry.reader_list[0] }}</a>
+                                {% if entry.reader_list[0] in ["epub", "kepub"] %}
+                                    <a target="_blank"
+                                       href="{{ url_for('web.read_book_scrolling_beta', book_id=entry.id, book_format=entry.reader_list[0]) }}"
+                                       class="btn btn-success" role="button"><span
+                                            class="glyphicon glyphicon-forward"></span> {{ _('Scrolling Reader (Beta)') }}</a>
+                                {% endif %}
                             {% endif %}
                         </div>
                     {% endif %}

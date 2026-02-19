@@ -2,53 +2,97 @@
 {% extends "layout.html" %}
 {% block body %}
 <div class="discover">
+    {% set is_simple_search = page == "search" and query %}
+    {% set is_adv_search = page == "advsearch" %}
     {% if entries|length < 1 %}
       <h2>{{_('No Results Found')}}</h2>
       <p>{{_('Search Term:')}} {{adv_searchterm}}</p>
-      {% if page == "search" and query %}
+      {% if is_simple_search or is_adv_search %}
         <div class="btn-toolbar" role="toolbar" aria-label="Search filters">
-          <a type="button"
-             class="btn btn-sm bulk-green-btn"
-             href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_toggle_query, show_all=show_all_query) }}">
-             {% if hide_shelved|default(false) %}
-               {{_('Show books already in shelves')}}
-             {% else %}
-               {{_('Hide books already in shelves')}}
-             {% endif %}
-          </a>
-          <a type="button"
-             class="btn btn-sm bulk-green-btn"
-             href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_query, show_all=show_all_toggle_query) }}">
-             {% if show_all|default(false) %}
-               {{_('Paginate results')}}
-             {% else %}
-               {{_('Show all on one page')}}
-             {% endif %}
-          </a>
+          {% if is_simple_search %}
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_toggle_query, show_all=show_all_query) }}">
+               {% if hide_shelved|default(false) %}
+                 {{_('Show books already in shelves')}}
+               {% else %}
+                 {{_('Hide books already in shelves')}}
+               {% endif %}
+            </a>
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_query, show_all=show_all_toggle_query) }}">
+               {% if show_all|default(false) %}
+                 {{_('Paginate results')}}
+               {% else %}
+                 {{_('Show all on one page')}}
+               {% endif %}
+            </a>
+          {% else %}
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, hide_shelved=hide_shelved_toggle_query, show_all=show_all_query) }}">
+               {% if hide_shelved|default(false) %}
+                 {{_('Show books already in shelves')}}
+               {% else %}
+                 {{_('Hide books already in shelves')}}
+               {% endif %}
+            </a>
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, hide_shelved=hide_shelved_query, show_all=show_all_toggle_query) }}">
+               {% if show_all|default(false) %}
+                 {{_('Paginate results')}}
+               {% else %}
+                 {{_('Show all on one page')}}
+               {% endif %}
+            </a>
+          {% endif %}
         </div>
       {% endif %}
     {% else %}
       <h2>{{result_count}} {{_('Results for:')}} {{adv_searchterm}}</h2>
-      {% if page == "search" and query %}
+      {% if is_simple_search or is_adv_search %}
         <div class="btn-toolbar" role="toolbar" aria-label="Search filters">
-          <a type="button"
-             class="btn btn-sm bulk-green-btn"
-             href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_toggle_query, show_all=show_all_query) }}">
-             {% if hide_shelved|default(false) %}
-               {{_('Show books already in shelves')}}
-             {% else %}
-               {{_('Hide books already in shelves')}}
-             {% endif %}
-          </a>
-          <a type="button"
-             class="btn btn-sm bulk-green-btn"
-             href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_query, show_all=show_all_toggle_query) }}">
-             {% if show_all|default(false) %}
-               {{_('Paginate results')}}
-             {% else %}
-               {{_('Show all on one page')}}
-             {% endif %}
-          </a>
+          {% if is_simple_search %}
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_toggle_query, show_all=show_all_query) }}">
+               {% if hide_shelved|default(false) %}
+                 {{_('Show books already in shelves')}}
+               {% else %}
+                 {{_('Hide books already in shelves')}}
+               {% endif %}
+            </a>
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, query=query, hide_shelved=hide_shelved_query, show_all=show_all_toggle_query) }}">
+               {% if show_all|default(false) %}
+                 {{_('Paginate results')}}
+               {% else %}
+                 {{_('Show all on one page')}}
+               {% endif %}
+            </a>
+          {% else %}
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, hide_shelved=hide_shelved_toggle_query, show_all=show_all_query) }}">
+               {% if hide_shelved|default(false) %}
+                 {{_('Show books already in shelves')}}
+               {% else %}
+                 {{_('Hide books already in shelves')}}
+               {% endif %}
+            </a>
+            <a type="button"
+               class="btn btn-sm bulk-green-btn"
+               href="{{ url_for('web.books_list', data=page, sort_param=current_sort, hide_shelved=hide_shelved_query, show_all=show_all_toggle_query) }}">
+               {% if show_all|default(false) %}
+                 {{_('Paginate results')}}
+               {% else %}
+                 {{_('Show all on one page')}}
+               {% endif %}
+            </a>
+          {% endif %}
         </div>
       {% endif %}
       {% if current_user.is_authenticated %}
@@ -111,14 +155,25 @@
         {% endif %}
       {% endif %}
       <div class="filterheader hidden-xs"><!-- ToDo: Implement filter for search results -->
-        <a id="new" data-toggle="tooltip" title="{{_('Sort according to book date, newest first')}}" class="btn btn-primary{% if order == "new" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='new', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-sort-by-order"></span></a>
-        <a id="old" data-toggle="tooltip" title="{{_('Sort according to book date, oldest first')}}" class="btn btn-primary{% if order == "old" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='old', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
-        <a id="asc" data-toggle="tooltip" title="{{_('Sort title in alphabetical order')}}" class="btn btn-primary{% if order == "abc" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='abc', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet"></span></a>
-        <a id="desc" data-toggle="tooltip" title="{{_('Sort title in reverse alphabetical order')}}" class="btn btn-primary{% if order == "zyx" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='zyx', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
-        <a id="auth_az" data-toggle="tooltip" title="{{_('Sort authors in alphabetical order')}}" class="btn btn-primary{% if order == "authaz" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='authaz', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-user"></span><span class="glyphicon glyphicon-sort-by-alphabet"></span></a>
-        <a id="auth_za" data-toggle="tooltip" title="{{_('Sort authors in reverse alphabetical order')}}" class="btn btn-primary{% if order == "authza" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='authza', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-user"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
-        <a id="pub_new" data-toggle="tooltip" title="{{_('Sort according to publishing date, newest first')}}" class="btn btn-primary{% if order == "pubnew" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='pubnew', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order"></span></a>
-        <a id="pub_old" data-toggle="tooltip" title="{{_('Sort according to publishing date, oldest first')}}" class="btn btn-primary{% if order == "pubold" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='pubold', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
+        {% if is_simple_search %}
+          <a id="new" data-toggle="tooltip" title="{{_('Sort according to book date, newest first')}}" class="btn btn-primary{% if order == "new" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='new', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-sort-by-order"></span></a>
+          <a id="old" data-toggle="tooltip" title="{{_('Sort according to book date, oldest first')}}" class="btn btn-primary{% if order == "old" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='old', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
+          <a id="asc" data-toggle="tooltip" title="{{_('Sort title in alphabetical order')}}" class="btn btn-primary{% if order == "abc" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='abc', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet"></span></a>
+          <a id="desc" data-toggle="tooltip" title="{{_('Sort title in reverse alphabetical order')}}" class="btn btn-primary{% if order == "zyx" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='zyx', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
+          <a id="auth_az" data-toggle="tooltip" title="{{_('Sort authors in alphabetical order')}}" class="btn btn-primary{% if order == "authaz" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='authaz', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-user"></span><span class="glyphicon glyphicon-sort-by-alphabet"></span></a>
+          <a id="auth_za" data-toggle="tooltip" title="{{_('Sort authors in reverse alphabetical order')}}" class="btn btn-primary{% if order == "authza" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='authza', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-user"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
+          <a id="pub_new" data-toggle="tooltip" title="{{_('Sort according to publishing date, newest first')}}" class="btn btn-primary{% if order == "pubnew" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='pubnew', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order"></span></a>
+          <a id="pub_old" data-toggle="tooltip" title="{{_('Sort according to publishing date, oldest first')}}" class="btn btn-primary{% if order == "pubold" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='pubold', query=query, hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
+        {% else %}
+          <a id="new" data-toggle="tooltip" title="{{_('Sort according to book date, newest first')}}" class="btn btn-primary{% if order == "new" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='new', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-sort-by-order"></span></a>
+          <a id="old" data-toggle="tooltip" title="{{_('Sort according to book date, oldest first')}}" class="btn btn-primary{% if order == "old" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='old', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
+          <a id="asc" data-toggle="tooltip" title="{{_('Sort title in alphabetical order')}}" class="btn btn-primary{% if order == "abc" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='abc', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet"></span></a>
+          <a id="desc" data-toggle="tooltip" title="{{_('Sort title in reverse alphabetical order')}}" class="btn btn-primary{% if order == "zyx" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='zyx', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-font"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
+          <a id="auth_az" data-toggle="tooltip" title="{{_('Sort authors in alphabetical order')}}" class="btn btn-primary{% if order == "authaz" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='authaz', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-user"></span><span class="glyphicon glyphicon-sort-by-alphabet"></span></a>
+          <a id="auth_za" data-toggle="tooltip" title="{{_('Sort authors in reverse alphabetical order')}}" class="btn btn-primary{% if order == "authza" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='authza', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-user"></span><span class="glyphicon glyphicon-sort-by-alphabet-alt"></span></a>
+          <a id="pub_new" data-toggle="tooltip" title="{{_('Sort according to publishing date, newest first')}}" class="btn btn-primary{% if order == "pubnew" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='pubnew', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order"></span></a>
+          <a id="pub_old" data-toggle="tooltip" title="{{_('Sort according to publishing date, oldest first')}}" class="btn btn-primary{% if order == "pubold" %} active{% endif%}" href="{{url_for('web.books_list', data=page, sort_param='pubold', hide_shelved=hide_shelved_query, show_all=show_all_query)}}"><span class="glyphicon glyphicon-calendar"></span><span class="glyphicon glyphicon-sort-by-order-alt"></span></a>
+        {% endif %}
       </div>
   {% endif %}
 

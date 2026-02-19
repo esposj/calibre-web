@@ -259,6 +259,8 @@ def extend_search_term(searchterm,
 def render_adv_search_results(term, offset=None, order=None, limit=None):
     sort = order[0] if order else [db.Books.sort]
     pagination = None
+    hide_shelved = _is_true_arg(request.args.get("hide_shelved"))
+    show_all = _is_true_arg(request.args.get("show_all"))
 
     cc = calibre_db.get_cc_columns(config, filter_config_custom_read=True)
     calibre_db.create_functions()
@@ -267,6 +269,13 @@ def render_adv_search_results(term, offset=None, order=None, limit=None):
     q = query.outerjoin(db.books_series_link, db.Books.id == db.books_series_link.c.book)\
         .outerjoin(db.Series)\
         .filter(calibre_db.common_filters(True))
+    if hide_shelved:
+        in_any_shelf = (
+            calibre_db.session.query(ub.BookShelf.id)
+            .filter(ub.BookShelf.book_id == db.Books.id)
+            .exists()
+        )
+        q = q.filter(~in_any_shelf)
 
     # parse multi selects to a complete dict
     tags = dict()
@@ -373,17 +382,25 @@ def render_adv_search_results(term, offset=None, order=None, limit=None):
     flask_session['query'] = json.dumps(term)
     ub.store_combo_ids(q)
     result_count = len(q)
-    if offset is not None and limit is not None:
+    if not show_all and offset is not None and limit is not None:
         offset = int(offset)
         limit_all = offset + int(limit)
         pagination = Pagination((offset / (int(limit)) + 1), limit, result_count)
     else:
         offset = 0
         limit_all = result_count
+    current_sort = order[1] if order and order[1] else "stored"
     entries = calibre_db.order_authors(q[offset:limit_all], list_return=True, combined=True)
     return render_title_template('search.html',
                                  adv_searchterm=search_term,
                                  pagination=pagination,
+                                 hide_shelved=hide_shelved,
+                                 hide_shelved_query="1" if hide_shelved else None,
+                                 hide_shelved_toggle_query=None if hide_shelved else "1",
+                                 show_all=show_all,
+                                 show_all_query="1" if show_all else None,
+                                 show_all_toggle_query=None if show_all else "1",
+                                 current_sort=current_sort,
                                  entries=entries,
                                  result_count=result_count,
                                  title=_("Advanced Search"), page="advsearch",

@@ -100,6 +100,16 @@
                                     - {{ entry.reader_list[0] }}</a>
                             {% endif %}
                         </div>
+                        {% set beta_format = 'epub' if 'epub' in entry.reader_list else ('kepub' if 'kepub' in entry.reader_list else None) %}
+                        {% if beta_format %}
+                            <div class="btn-group" role="group">
+                                <a target="_blank"
+                                   href="{{ url_for('web.read_book_scrolling_beta', book_id=entry.id, book_format=beta_format) }}"
+                                   class="btn btn-success" role="button">
+                                    <span class="glyphicon glyphicon-sort-by-order"></span> {{ _('Scrolling Reader (Beta)') }}
+                                </a>
+                            </div>
+                        {% endif %}
                     {% endif %}
                     {% if entry.audio_entries|length > 0 and current_user.role_viewer() %}
                         <div class="btn-group" role="group">

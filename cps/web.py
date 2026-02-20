@@ -94,10 +94,10 @@ def add_security_headers(resp):
     default_src = ([host.strip() for host in config.config_trustedhosts.split(',') if host] +
                    ["'self'", "'unsafe-inline'", "'unsafe-eval'"])
     csp = "default-src " + ' '.join(default_src)
-    if request.endpoint == "web.read_book" and config.config_use_google_drive:
+    if request.endpoint in ("web.read_book", "web.read_book_scrolling_beta") and config.config_use_google_drive:
         csp +=" blob: "
     csp += "; font-src 'self' data:"
-    if request.endpoint == "web.read_book":
+    if request.endpoint in ("web.read_book", "web.read_book_scrolling_beta"):
         csp += " blob: "
     csp += "; img-src 'self'"
     if request.path.startswith("/author/") and config.config_use_goodreads:
@@ -105,7 +105,7 @@ def add_security_headers(resp):
     csp += " data:"
     if request.endpoint == "edit-book.show_edit_book" or config.config_use_google_drive:
         csp += " *"
-    if request.endpoint == "web.read_book":
+    if request.endpoint in ("web.read_book", "web.read_book_scrolling_beta"):
         csp += " blob: ; style-src-elem 'self' blob: 'unsafe-inline'"
     csp += "; object-src 'none';"
     resp.headers['Content-Security-Policy'] = csp
@@ -1663,6 +1663,34 @@ def read_book(book_id, book_format):
         flash(_("Oops! Selected book is unavailable. File does not exist or is not accessible"),
               category="error")
         return redirect(url_for("web.index"))
+
+@web.route("/read-beta/<int:book_id>/<book_format>")
+@login_required_if_no_ano
+@viewer_required
+def read_book_scrolling_beta(book_id, book_format):
+    book = calibre_db.get_filtered_book(book_id)
+
+    if not book:
+        flash(_("Oops! Selected book is unavailable. File does not exist or is not accessible"),
+              category="error")
+        return redirect(url_for("web.index"))
+
+    if book_format.lower() not in ("epub", "kepub"):
+        flash(_("Oops! Selected book format is not supported by the scrolling reader."),
+              category="error")
+        return redirect(url_for("web.show_book", book_id=book_id))
+
+    bookmark = None
+    if current_user.is_authenticated:
+        bookmark = ub.session.query(ub.Bookmark).filter(and_(ub.Bookmark.user_id == int(current_user.id),
+                                                             ub.Bookmark.book_id == book_id,
+                                                             ub.Bookmark.format == book_format.upper())).first()
+
+    return render_title_template('read_scroll_beta.html',
+                                 bookid=book_id,
+                                 title=book.title,
+                                 bookmark=bookmark,
+                                 book_format=book_format)
 
 
 @web.route("/book/<int:book_id>")

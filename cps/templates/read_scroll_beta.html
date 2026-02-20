@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html class="no-js">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+    <title>{{_('Scrolling Reader (Beta)')}} | {{title}}</title>
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <link rel="apple-touch-icon" sizes="140x140" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/libs/normalize.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/reader_scrolling_beta.css') }}">
+</head>
+<body class="scrolling-reader-beta">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="beta-layout">
+        <aside id="beta-sidebar" class="beta-sidebar">
+            <div class="beta-sidebar-header">{{ _('Navigation') }}</div>
+            <div class="beta-panel">
+                <div class="beta-panel-title">{{ _('Chapters') }}</div>
+                <ul id="beta-toc" class="beta-list"></ul>
+            </div>
+            <div class="beta-panel">
+                <div class="beta-panel-title">{{ _('Bookmark') }}</div>
+                <ul id="beta-bookmarks" class="beta-list"></ul>
+            </div>
+        </aside>
+
+        <main class="beta-main">
+            <header class="beta-toolbar">
+                <div class="beta-toolbar-left">
+                    <a class="btn btn-success btn-sm" href="{{ url_for('web.show_book', book_id=bookid) }}">{{ _('Back') }}</a>
+                    <button type="button" id="beta-sidebar-toggle" class="btn btn-success btn-sm">{{ _('Menu') }}</button>
+                    <button type="button" id="beta-play-toggle" class="btn btn-success btn-sm">{{ _('Play') }}</button>
+                </div>
+                <div class="beta-toolbar-center">
+                    <button type="button" id="beta-speed-down" class="btn btn-success btn-sm">-</button>
+                    <input id="beta-speed" type="range" min="20" max="420" step="10" value="80">
+                    <button type="button" id="beta-speed-up" class="btn btn-success btn-sm">+</button>
+                    <span id="beta-speed-label">80 px/s</span>
+                </div>
+                <div class="beta-toolbar-right">
+                    <button type="button" id="beta-prev" class="btn btn-success btn-sm">{{ _('Prev') }}</button>
+                    <select id="beta-chapters" class="form-control input-sm"></select>
+                    <button type="button" id="beta-next" class="btn btn-success btn-sm">{{ _('Next') }}</button>
+                    <button type="button" id="beta-bookmark-toggle" class="btn btn-success btn-sm">{{ _('Bookmark') }}</button>
+                </div>
+            </header>
+
+            <section class="beta-settings">
+                <label>{{ _('Typeface') }}
+                    <select id="beta-font-family" class="form-control input-sm">
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="'Palatino Linotype', Palatino, serif">Palatino</option>
+                        <option value="'Times New Roman', serif">Times New Roman</option>
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="Verdana, sans-serif">Verdana</option>
+                    </select>
+                </label>
+                <label>{{ _('Font Size') }}
+                    <input id="beta-font-size" type="range" min="80" max="220" step="5" value="110">
+                    <span id="beta-font-size-label">110%</span>
+                </label>
+                <label>{{ _('Line Spacing') }}
+                    <input id="beta-line-height" type="range" min="1.1" max="2.4" step="0.1" value="1.6">
+                    <span id="beta-line-height-label">1.6</span>
+                </label>
+                <label>{{ _('Margins') }}
+                    <input id="beta-margin" type="range" min="0" max="18" step="1" value="6">
+                    <span id="beta-margin-label">6%</span>
+                </label>
+                <label>{{ _('Text Width') }}
+                    <input id="beta-text-width" type="range" min="560" max="1400" step="20" value="900">
+                    <span id="beta-text-width-label">900px</span>
+                </label>
+                <label>{{ _('Theme') }}
+                    <select id="beta-theme" class="form-control input-sm">
+                        <option value="light">{{ _('Light') }}</option>
+                        <option value="sepia">{{ _('Sepia') }}</option>
+                        <option value="dark">{{ _('Dark') }}</option>
+                    </select>
+                </label>
+            </section>
+
+            <div id="beta-viewer" class="beta-viewer"></div>
+            <footer class="beta-status">
+                <div id="beta-title"></div>
+                <div id="beta-progress">0%</div>
+                <div id="beta-pages"></div>
+            </footer>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/libs/jquery.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/compress/jszip_epub.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/libs/epub.min.js') }}"></script>
+    <script>
+        window.calibre = {
+            bookId: {{ bookid }},
+            bookUrl: "{{ url_for('web.serve_book', book_id=bookid, book_format=book_format, anyname='file.epub') }}",
+            bookmarkUrl: "{{ url_for('web.set_bookmark', book_id=bookid, book_format=book_format) }}",
+            bookmark: {{ (bookmark.bookmark_key if bookmark else '') | tojson }},
+            useBookmarks: {{ current_user.is_authenticated | tojson }}
+        };
+    </script>
+    <script src="{{ url_for('static', filename='js/reading/epub_scrolling_beta.js') }}"></script>
+</body>
+</html>

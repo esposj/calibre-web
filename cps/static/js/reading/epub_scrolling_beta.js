@@ -18,8 +18,11 @@ var reader;
     };
     var chapterItems = [];
     var activeChapterIndex = -1;
-    var rafId = null;
-    var lastTickTs = 0;
+    var intervalId = null;
+    var lastTickMs = 0;
+    var chapterAdvanceCooldownUntil = 0;
+    var pendingPositionPersist = null;
+    var lastPersistedCfi = null;
 
     var $progress = $("#progress");
     var $pages = $("#pages-count");
@@ -95,6 +98,30 @@ var reader;
         $textWidth.val(state.textWidth);
         $textWidthValue.text(state.textWidth + "px");
         $playPause.text(state.isPlaying ? pauseLabel : playLabel);
+    }
+
+    function schedulePositionPersist(positionKey, location) {
+        if (!location || !location.start || !location.start.cfi) {
+            return;
+        }
+        var cfi = location.start.cfi;
+        if (cfi === lastPersistedCfi) {
+            return;
+        }
+        if (pendingPositionPersist) {
+            clearTimeout(pendingPositionPersist);
+            pendingPositionPersist = null;
+        }
+        pendingPositionPersist = setTimeout(function () {
+            try {
+                localStorage.setItem(positionKey, JSON.stringify({
+                    cfi: cfi,
+                    percentage: location.start.percentage
+                }));
+                lastPersistedCfi = cfi;
+            } catch (e) {}
+            pendingPositionPersist = null;
+        }, 300);
     }
 
     function currentThemeTextColor() {
@@ -220,27 +247,34 @@ var reader;
         return false;
     }
 
-    function tick(ts) {
-        if (!lastTickTs) {
-            lastTickTs = ts;
+    function tick() {
+        var now = Date.now();
+        if (!lastTickMs) {
+            lastTickMs = now;
         }
-        var dt = (ts - lastTickTs) / 1000;
-        lastTickTs = ts;
+        var dt = (now - lastTickMs) / 1000;
+        if (dt <= 0) {
+            dt = 0.04;
+        }
+        if (dt > 0.25) {
+            dt = 0.25;
+        }
+        lastTickMs = now;
 
         if (state.isPlaying) {
             var moved = scrollCurrentContents(state.speed * dt);
-            if (!moved) {
+            if (!moved && now >= chapterAdvanceCooldownUntil) {
+                chapterAdvanceCooldownUntil = now + 1200;
                 try {
                     reader.rendition.next();
                 } catch (e) {}
             }
         }
-        rafId = window.requestAnimationFrame(tick);
     }
 
     function startTicker() {
-        if (!rafId) {
-            rafId = window.requestAnimationFrame(tick);
+        if (!intervalId) {
+            intervalId = window.setInterval(tick, 40);
         }
     }
 
@@ -414,6 +448,7 @@ var reader;
                 reader.rendition.on("relocated", function (location) {
                     var percentage = Math.round(location.end.percentage * 100);
                     $progress.text(percentage + "%");
+                    chapterAdvanceCooldownUntil = Date.now() + 600;
 
                     var cfi = location.start.cfi;
                     var current = reader.book.locations.locationFromCfi(cfi) || 0;
@@ -423,10 +458,7 @@ var reader;
                     } else {
                         $pages.text("");
                     }
-                    localStorage.setItem(positionKey, JSON.stringify({
-                        cfi: location.start.cfi,
-                        percentage: location.start.percentage
-                    }));
+                    schedulePositionPersist(positionKey, location);
                     if (location && location.start && location.start.href) {
                         updateActiveChapterByHref(location.start.href);
                     }

@@ -23,7 +23,7 @@
         width: "100%",
         height: "100%",
         manager: "continuous",
-        flow: "scrolled-continuous",
+        flow: "scrolled-doc",
         spread: "none"
     });
 
@@ -66,10 +66,6 @@
 
     initControls();
     applyPrefsToInputs();
-    applyTheme();
-    applyTypography();
-
-    rendition.display(prefs.cfi || savedBookmark || undefined);
 
     rendition.on("relocated", function (location) {
         currentLocation = location;
@@ -82,6 +78,8 @@
         if (section && section.href) {
             updateChapterSelection(section.href);
         }
+        applyTheme();
+        applyTypography();
     });
 
     book.ready.then(function () {
@@ -93,6 +91,9 @@
         buildChapters(results[1]);
         updateProgress(currentLocation);
         renderBookmarkList();
+        return safeDisplay(prefs.cfi || savedBookmark || undefined);
+    }).catch(function () {
+        return safeDisplay(undefined);
     });
 
     if (!calibre.useBookmarks) {
@@ -104,6 +105,14 @@
         startAutoScroll();
     } else {
         setPlayLabel(false);
+    }
+
+    function safeDisplay(target) {
+        return rendition.display(target).catch(function () {
+            return rendition.display();
+        }).catch(function () {
+            els.viewer.innerHTML = "<div style='padding:18px;color:#fff'>Failed to render book content.</div>";
+        });
     }
 
     function loadPrefs() {
